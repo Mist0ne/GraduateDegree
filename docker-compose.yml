@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+#  nginx:
+#    container_name: nginx
+#    image: nginx:1.24.0-alpine-slim
+#    # build:
+#    #   context: ./nginx
+#    #   dockerfile: Dockerfile
+#    volumes:
+#     - ./nginx/etc/nginx/conf.d:/etc/nginx/conf.d:ro
+#     - ./nginx/etc/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+##    ports:
+##     - "80":"80"
+##     - "443":"443"
+
+  redis:
+    container_name: redis
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  # backend:
+  #   container_name: backend
+  #   ports:
+  #     -8000:8000
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "npm run start"
+    depends_on:
+      - filter
+
+  filter:
+    container_name: filter
+    build:
+      context: ./filter
+      dockerfile: Dockerfile
+    volumes:
+      - ./filter:/filter
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "python3 main.py"
+    depends_on:
+      - redis
+      - celery_worker
+
+  celery_worker:
+    container_name: celery_worker
+    build:
+      context: ./filter
+      dockerfile: Dockerfile
+    volumes:
+      - ./filter:/filter
+    command: >
+      sh -c "celery -A tasks.celeryApp worker"
+
+  flower:
+    container_name: flower
+    build:
+      context: ./filter
+      dockerfile: Dockerfile
+    volumes:
+      - ./filter:/filter
+    ports:
+      - "5555:5555"
+    command: >
+      sh -c "celery -A tasks.celeryApp flower"
+    depends_on:
+      - celery_worker
+    
+
+  # db:
+  #   # build:
+  #   #   context: ./db
+  #   #   dockerfile: Dockerfile
+  #   container_name: postgres
+  #   image: postgres:15-alpine
+  #   ports:
+  #     - 5432:5432
+  #   restart: always
+  #   volumes:
+  #     - postgres_volume:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_DB=database
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=kutuzov
+  # pgadmin:
+  #   container_name: pgadmin4
+  #   image: dpage/pgadmin4
+  #   restart: always
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: asdf@asfd.asfd
+  #     PGADMIN_DEFAULT_PASSWORD: kutuzov
+  #   ports:
+  #     - "${PGADMIN_PORT:-5050}:80"
+  #   volumes:
+  #      - pgadmin_volume:/var/lib/pgadmin
+  #   depends_on:
+  #     - db
+
+#volumes:
+#  postgres_volume:
+#  pgadmin_volume:

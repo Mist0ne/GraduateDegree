@@ -1,0 +1,7 @@
+wheel
+flask
+flask-cors
+celery
+flower
+redis
+quicksand
