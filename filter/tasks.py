@@ -1,5 +1,3 @@
-import time
-
 from redis import Redis
 from celery import Celery
 from myquicksand.myquicksand import quicksand
@@ -12,18 +10,19 @@ allowed_extensions = ['pdf']
 
 @celeryApp.task(bind=True)
 def check_files(self, filename, file_content):
-    time.sleep(200)
     qs = quicksand(data=bytes(file_content, encoding='utf-8'), filename=filename, strings=False)
     qs.process()
     results = qs.results
     if results['type'] not in allowed_extensions:
-        redis.set(f'{self.request.id}_results', 'unknown file extension')
-        return False
-    redis.set(f'{self.request.id}_results', str(results))
-    if results['warning'] == 0 and results['exploit'] == 0 and results['execute'] == 0:
-        return True
+        allowed = False
+        redis.json().set(name=self.request.id, path='$', obj={'uuid': self.request.id, 'name': filename, 'allowed': allowed, 'results': 'unknown file extension'})
     else:
-        return False
+        if results['warning'] == 0 and results['exploit'] == 0 and results['execute'] == 0:
+            allowed = True
+        else:
+            allowed = False
+        redis.json().set(name=self.request.id, path='$', obj={'uuid': self.request.id, 'name': filename, 'allowed': allowed, 'results': str(results)})
+    return allowed
 
 
 if __name__ == '__main__':

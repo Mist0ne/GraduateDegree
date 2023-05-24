@@ -18,31 +18,28 @@ def file_check():
     files = request.files
     for input_name in files.keys():
         for file in files.getlist(input_name):
-            res = check_files.delay(file.name, str(file.read()))
+            res = check_files.delay(file.filename, str(file.read()))
             file_ids.append(res.id)
-    old_ids = redis.get('task_ids')
-    if old_ids:
-        redis.set('task_ids', old_ids.decode() + " " + " ".join(file_ids))
-    else:
-        redis.set('task_ids', " ".join(file_ids))
+    old_ids = redis.json().get('task_ids')
+    if not old_ids:
+        old_ids = []
+    redis.json().set('task_ids', '$', old_ids + file_ids)
     return jsonify(file_ids), 200
 
 
 @app.route('/statistics', methods=['GET'])
 def statistics():
-    db_value = redis.get('task_ids')
-    if db_value:
+    task_ids = redis.json().get('task_ids')
+    if task_ids:
         return_value = {}
-        task_ids = db_value.decode().split()
         for task_id in task_ids:
             res = AsyncResult(task_id, app=celeryApp)
             if res.state == 'SUCCESS':
-                return_value[task_id] = res.result
-                return_value[f'{task_id}_results'] = redis.get(f'{task_id}_results').decode('utf-8')
+                return_value[task_id] = {'status': res.state, 'data': redis.json().get(task_id)}
             elif res.state == 'PENDING':
-                return_value[task_id] = 'in progress'
+                return_value[task_id] = {'status': res.state}
             else:
-                return_value[task_id] = 'unknown task id'
+                return_value[task_id] = {'status': 'unknown task id'}
         return jsonify(return_value), 200
     return jsonify(''), 200
 
