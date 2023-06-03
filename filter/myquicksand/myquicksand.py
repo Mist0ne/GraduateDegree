@@ -980,7 +980,7 @@ class quicksand:
             return "ole"
         elif re.search(b'\x50\x4B\x03\x04\x14\x00', doc, re.IGNORECASE):  # should be deeper
             return "openxml"
-        elif doc[:2] == b'PK':
+        elif re.search(b'PK', doc[:10], re.IGNORECASE):
             return "zip"
         elif re.search(b'%PDF', doc[0:1024], re.IGNORECASE):
             return "pdf"

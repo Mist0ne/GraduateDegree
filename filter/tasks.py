@@ -5,7 +5,7 @@ from myquicksand.myquicksand import quicksand
 
 celeryApp = Celery("celeryApp", broker="redis://redis:6379", backend='redis://redis:6379')
 redis = Redis(host='redis', port=6379)
-allowed_extensions = ['pdf']
+allowed_extensions = ['pdf', 'zip', 'rar']
 
 
 @celeryApp.task(bind=True)

@@ -2226,4 +2226,21 @@ rule pdf_exploit_using_jbig2decode_CVE_2009_0658 {
 	condition: all of them
 }
 
+rule multiple_filtering {
+    meta:
+        is_exploit = true
+		is_warning = false
+		is_feature = false
+		rank = 5
+		revision = "1"
+		sigtype = "pdfexaminer_obfuscation"
+		desc = "pdf.exploit using multiple filtering"
 
+    strings:
+            $magic = { 25 50 44 46 }
+            $attrib = /\/Filter.*(\/ASCIIHexDecode\W+|\/LZWDecode\W+|\/ASCII85Decode\W+|\/FlateDecode\W+|\/RunLengthDecode){2}/
+            // left out: /CCITTFaxDecode, JBIG2Decode, DCTDecode, JPXDecode, Crypt
+
+    condition:
+            $magic in (0..1024) and $attrib
+}
